@@ -49,19 +49,18 @@ def steering_zero_point():
             pass
         motor_steer.stop()
 
-def findclosest(list):
+def findclosest(obstacles):
     #traffic lights have given size, we can find the closest one if we compare their areas in our field of view
     largestarea = 0
-    largest = 0
-    for i in list:
-        area = getattr(i, 'height')*getattr(i, 'width')
-        ID = getattr(i, 'ID')
+    largest = None
+    for i, obstacle in enumerate(obstacles):
+        area = getattr(obstacle, 'height')*getattr(obstacle, 'width')
+        ID = i
         if (area > largestarea):
             largestarea = area
             largest = ID
-        else:
-            continue
-    return largest
+    
+    return obstacles[largest]
 
 varvid = {1 : 'red', 2 : 'green'}
     
@@ -76,7 +75,7 @@ def main_loop():
     #print(type(blocks))
     '''for block in blocks:
         print(getattr(block, 'height'))'''
-    print('The closest block is: ', varvid.get(findclosest(blocks)))
+    print('The closest block is: ', varvid.get(getattr(findclosest(blocks), "ID")))
     
 main_loop()
 #testing
