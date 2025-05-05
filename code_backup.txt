@@ -60,8 +60,10 @@ def findclosest(obstacles):
             largestarea = area
             largest = ID
     
-    return obstacles[largest]
-
+    try:
+        return obstacles[largest]
+    except:
+        return None
 varvid = {1 : 'red', 2 : 'green'}
     
 
