@@ -1,0 +1,91 @@
+"""
+This programm is for WRO future engineer self driving car, it uses spike and huskylens for automated recognition and self driving
+authors Heiki, Markus, Juhan Jasper
+"""
+
+from spike import Motor
+from hub import port
+import time
+from projects.mpy_robot_tools.pyhuskylens import HuskyLens, ALGORITHM_COLOR_RECOGNITION #first is huskylens class and second is the algorithm we use
+
+hl = HuskyLens('A')
+
+#print(hl.get_version())
+
+motor_steer = Motor("C")
+motor_fwd = Motor("B")
+motor_steer.set_default_speed(10)
+steer_error = 15
+
+def steering_calibration():
+    """
+    calibrates steering and puts it in zero position and makes it a position 0
+    """
+
+    motor_steer.run_for_seconds(3, -20)
+    time.sleep(1)
+    motor_steer.set_degrees_counted(0)
+    motor_steer.run_for_seconds(3, 20)
+    motor_steer.run_for_degrees(-int((motor_steer.get_degrees_counted()+steer_error)/2))
+    time.sleep(1)
+    motor_steer.set_degrees_counted(0)
+
+def steering_zero_point():
+    """
+    goes zero according to the set point on the motor which was set by steering_kalibration function
+    """
+
+    #when wheels are in right
+    if (motor_steer.get_degrees_counted() > 0 ):
+        motor_steer.start(-10)
+        while (not motor_steer.get_degrees_counted() <= 0):
+            pass
+        motor_steer.stop()
+    
+    #when wheels are on the left
+    if (motor_steer.get_degrees_counted() < 0 ):
+        motor_steer.start(-10)
+        while (not motor_steer.get_degrees_counted() >= 0):
+            pass
+        motor_steer.stop()
+
+def findclosest(list):
+    #traffic lights have given size, we can find the closest one if we compare their areas in our field of view
+    largestarea = 0
+    largest = 0
+    for i in list:
+        area = getattr(i, 'height')*getattr(i, 'width')
+        ID = getattr(i, 'ID')
+        if (area > largestarea):
+            largestarea = area
+            largest = ID
+        else:
+            continue
+    return largest
+
+varvid = {1 : 'red', 2 : 'green'}
+    
+
+def main_loop():
+    """
+    The main loop that does all the recognition and deciding how to turn acordingly
+    """
+    #steering_calibration()
+    print(hl.get_blocks())
+    blocks = hl.get_blocks()
+    #print(type(blocks))
+    '''for block in blocks:
+        print(getattr(block, 'height'))'''
+    print('The closest block is: ', varvid.get(findclosest(blocks)))
+    
+main_loop()
+#testing
+"""
+Random usefull info:
+
+hl = HuskyLens('A')
+what port we use
+
+hl.get_blocks()
+gives out a list of bloks with x,y and width, height and block id
+"""
