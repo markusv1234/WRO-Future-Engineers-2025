@@ -3,15 +3,15 @@ This programm is for WRO future engineer self driving car, it uses spike and hus
 authors Heiki, Markus, Juhan Jasper
 """
 
-from spike import Motor
+from spike import Motor, DistanceSensor, PrimeHub
 from hub import port
 import time
 from projects.mpy_robot_tools.pyhuskylens import HuskyLens, ALGORITHM_COLOR_RECOGNITION #first is huskylens class and second is the algorithm we use
 
 hl = HuskyLens('A')
 
-#print(hl.get_version())
-
+hub = PrimeHub()
+distance = DistanceSensor('D')
 motor_steer = Motor("C")
 motor_fwd = Motor("B")
 motor_steer.set_default_speed(10)
@@ -22,10 +22,10 @@ def steering_calibration():
     calibrates steering and puts it in zero position and makes it a position 0
     """
 
-    motor_steer.run_for_seconds(3, -20)
+    motor_steer.run_for_seconds(9, -5)
     time.sleep(1)
     motor_steer.set_degrees_counted(0)
-    motor_steer.run_for_seconds(3, 20)
+    motor_steer.run_for_seconds(9, 5)
     motor_steer.run_for_degrees(-int((motor_steer.get_degrees_counted()+steer_error)/2))
     time.sleep(1)
     motor_steer.set_degrees_counted(0)
@@ -37,15 +37,15 @@ def steering_zero_point():
 
     #when wheels are in right
     if (motor_steer.get_degrees_counted() > 0 ):
-        motor_steer.start(-10)
-        while (not motor_steer.get_degrees_counted() <= 0):
+        motor_steer.start(-30)
+        while (not motor_steer.get_degrees_counted() <= -15):
             pass
         motor_steer.stop()
     
     #when wheels are on the left
     if (motor_steer.get_degrees_counted() < 0 ):
-        motor_steer.start(-10)
-        while (not motor_steer.get_degrees_counted() >= 0):
+        motor_steer.start(30)
+        while (not motor_steer.get_degrees_counted() >= -8):
             pass
         motor_steer.stop()
 
@@ -62,22 +62,89 @@ def findclosest(obstacles):
     
     try:
         return obstacles[largest]
+        print(obstacles[largest])
     except:
         return None
 varvid = {1 : 'red', 2 : 'green'}
+
+def avoid_obstacle(turn_way):
+
+    if (turn_way == 'red'):
+        print('hakkan paremale pöörama, red')
+        turn(15)
+        time.sleep(0.5)
+        print('hakkan vasakule pöörama, red')
+        turn(-15)
+        time.sleep(2)
+    if (turn_way == 'green'):
+        print('hakkan vasakule pöörama, green')
+        turn(-15)
+        time.sleep(0.5)
+        turn(15)
+        time.sleep(2)
+        print('hakkan paremale pöörama, green')
+
+def dist():
+    #exist only because when distance is over 200 it says none and it does not work in the if so to make it easier putted it to 200
+    if (distance.get_distance_cm() == None):
+        return 200
+    else:
+        return distance.get_distance_cm()
+
+
+def turn(way):
+    time.sleep(0.2)
+    hub.motion_sensor.reset_yaw_angle()
+    print(hub.motion_sensor.get_yaw_angle())
+
+    if (way < 0):
+        motor_steer.start(-30)
+        print('lähen vasakule')
+        while(hub.motion_sensor.get_yaw_angle() >= way):
+            pass
+        print(hub.motion_sensor.get_yaw_angle())
+
+    elif(way > 0):
+        motor_steer.start(30)
+        print('lähen paremale')
+        while(hub.motion_sensor.get_yaw_angle() <= way):
+            pass
     
+    motor_steer.stop()
+    print('peatasin pööramise')
+    steering_zero_point()
+
+def find_color(obstacle):
+    #returns the colour ID of the closest block
+    #input of class from huskylens, gets value of id, matches it to varvid
+    try:
+        return varvid.get(getattr(obstacle, 'ID'))
+    except:
+        return None
 
 def main_loop():
     """
     The main loop that does all the recognition and deciding how to turn acordingly
     """
-    #steering_calibration()
-    print(hl.get_blocks())
-    blocks = hl.get_blocks()
-    #print(type(blocks))
-    '''for block in blocks:
-        print(getattr(block, 'height'))'''
-    print('The closest block is: ', varvid.get(getattr(findclosest(blocks), "ID")))
+    steering_calibration()
+
+    motor_fwd.start(30)
+
+    while(True):
+        blocks = hl.get_blocks()
+
+        if( dist() <= 60):
+            turn(-90)
+
+        avoid_obstacle(find_color(findclosest(blocks)))
+        """
+        # avoiding obsticale according the colour
+        elif(findclosest(blocks) not None):
+            just_turn = False
+            avoid_obsticale(varvid.get(getattr(findclosest(blocks))
+
+        print('The closest block is: ', varvid.get(getattr(findclosest(blocks), "ID")))
+        """
     
 main_loop()
 #testing
